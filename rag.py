@@ -1,0 +1,57 @@
+import sys
+from rag.pipeline import build_rag_pipeline
+import os
+from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+def load_your_model_here(model_name="gemini-2.0-flash"):
+    """
+    Load Gemini model using API key.
+    """
+    api_key = "MY API KEY"   # 직접 입력 가능
+
+    if not api_key:
+        raise ValueError("GOOGLE_API_KEY is not set in environment variables.")
+
+    model = ChatGoogleGenerativeAI(
+        model=model_name,
+        google_api_key=api_key,
+        temperature=0.2,
+        max_output_tokens=4096
+    )
+
+    return model
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <query.txt>")
+        return
+
+    query_path = sys.argv[1]
+
+    # 1. txt 파일 내용 읽기
+    with open(query_path, "r", encoding="utf-8") as f:
+        query = f.read().strip()
+
+    # 2. 모델 로드 (예: OpenAI/Gemini)
+    model = load_your_model_here()
+
+    # 3. RAG 파이프라인 생성
+    agent = build_rag_pipeline(model)
+
+    # 4. invoke 실행
+    response = agent.invoke({"messages": [{"role": "user", "content": query}]})
+
+    # 5. 콘솔 표시
+    print("\n--- Response ---\n")
+    print(response)
+
+    # 6. 파일로 출력
+    output_path = query_path + ".answer"
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(str(response))
+
+    print(f"\nAnswer saved to {output_path}")
+
+if __name__ == "__main__":
+    main()
