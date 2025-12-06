@@ -9,7 +9,7 @@ def load_your_model_here(model_name="gemini-2.0-flash"):
     """
     Load Gemini model using API key.
     """
-    api_key = "AIzaSyD8CO2cjnWDRvai8WzGJ2-gzYz-7ibfo8Y"
+    api_key = "XXXXXXXXXXXX"
     # your api key
 
     if not api_key:
