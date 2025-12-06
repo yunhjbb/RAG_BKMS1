@@ -1,0 +1,23 @@
+# ===== LangChain Core =====
+langchain
+langchain_openai
+langchain_google_genai
+langchain-community
+langchain-huggingface
+
+# ===== Embeddings: InstructorXL =====
+sentence-transformers
+transformers
+accelerate
+
+# ===== Vector DBs =====
+faiss-cpu
+chromadb
+
+# ===== PDF Loader =====
+pypdf
+
+tqdm
+numpy
+scikit-learn
+python-dotenv

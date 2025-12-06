@@ -9,7 +9,8 @@ def load_your_model_here(model_name="gemini-2.0-flash"):
     """
     Load Gemini model using API key.
     """
-    api_key = "MY API KEY"   # 직접 입력 가능
+    api_key = "AIzaSyD8CO2cjnWDRvai8WzGJ2-gzYz-7ibfo8Y"
+    # your api key
 
     if not api_key:
         raise ValueError("GOOGLE_API_KEY is not set in environment variables.")
