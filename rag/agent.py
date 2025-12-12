@@ -1,7 +1,24 @@
 from langchain.agents import create_agent
 from langchain.agents.middleware import dynamic_prompt, ModelRequest
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.documents import Document
 
+# (1) Define a simple helper class
+class RAGContextHolder:
+    def __init__(self):
+        # A variable to store the most recently retrieved docs
+        self.last_retrieved_docs = []
+
+    def set_docs(self, docs: list[Document]):
+        """Called by the middleware to save the retrieved docs"""
+        self.last_retrieved_docs = docs
+
+    def get_docs(self) -> list[Document]:
+        """Called by the evaluation function to get the saved docs"""
+        return self.last_retrieved_docs
+
+# (2) Create a "global" instance of this class
+context_holder = RAGContextHolder()
 
 def build_agent(model, retriever):
 
@@ -82,6 +99,7 @@ def build_agent(model, retriever):
         # reference-aware 확장
         expanded_docs = expand_with_references(base_docs, retriever)
         print(f"[Ref-aware] Expanded to {len(expanded_docs)} docs.")
+        context_holder.set_docs(expanded_docs)
 
         # context 만들기
         context_blocks = []

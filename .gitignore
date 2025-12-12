@@ -11,3 +11,4 @@ venv/
 Thumbs.db
 *.pkl
 *.pdf
+runs

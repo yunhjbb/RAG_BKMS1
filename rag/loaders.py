@@ -67,7 +67,7 @@ def load_and_split_pdfs(
         print(f"[Cache] Loading reference chunks from {cache_refs}")
         ref_chunks = load_pickle(cache_refs)
 
-        # ⚠️ reference_index_map도 캐시에서 다시 구성해야 한다.
+    
         reference_index_map = {}
         for ch in ref_chunks:
             idx = str(ch.metadata.get("ref_index"))
@@ -137,7 +137,7 @@ def load_and_split_pdfs(
         chunk_overlap=200
     )
 
-    ref_splitter = RecursiveCharacterTextSplitter(
+    ref_splitter = TokenTextSplitter(
         chunk_size=1000,
         chunk_overlap=100
     )

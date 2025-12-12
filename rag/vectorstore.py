@@ -21,7 +21,6 @@ def load_chroma(collection_name="rag_collection", path="./chroma_store", embeddi
     )
 
 def build_or_load_chroma(chunks, embedding_model, path="./chroma_store", collection_name="rag_collection"):
-    # 조건: path 폴더가 있으면 이미 DB 있음 (컬렉션 자동 로드됨)
     if os.path.exists(path) and os.listdir(path):
         print(f"[Chroma] Loading existing Chroma DB from {path}")
         return load_chroma(collection_name, path, embedding_model)
