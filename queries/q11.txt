@@ -1,0 +1,1 @@
+Describe the relationship between GraphRAG and Knowledge Base Question Answering (KBQA).

@@ -1,0 +1,1 @@
+Provide two examples of open knowledge graphs used as retrieval sources in the biomedical application domain of GraphRAG.

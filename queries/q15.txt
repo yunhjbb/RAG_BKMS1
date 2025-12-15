@@ -1,0 +1,1 @@
+What are the two major Graph Formats used to input graph data into LMs during the G-Generation phase?

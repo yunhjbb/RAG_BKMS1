@@ -1,0 +1,1 @@
+What are the two main types of evaluation metrics commonly used in GraphRAG system evaluation?

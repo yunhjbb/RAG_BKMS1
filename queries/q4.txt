@@ -1,0 +1,1 @@
+What is the name of the benchmark dataset designed to evaluate GraphRAG systems, covering applications like scene graph understanding and commonsense reasoning?

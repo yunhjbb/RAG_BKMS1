@@ -1,0 +1,1 @@
+How does GraphRAG help solve the Query-Focused Summarization (QFS) challenge?

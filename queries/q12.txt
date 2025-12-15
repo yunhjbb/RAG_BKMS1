@@ -1,0 +1,1 @@
+What is the single difference between Adaptive and Non-Adaptive Iterative Retrieval?
