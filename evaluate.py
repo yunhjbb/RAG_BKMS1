@@ -48,6 +48,98 @@ agent = build_rag_pipeline(
     chunk_size_ref=args.chunk_size_ref,
     chunk_overlap_ref=args.chunk_overlap_ref,
 )
+
+class RelevanceGrade(TypedDict):
+    score: Annotated[int, ..., "Score 1-5"]
+
+relevance_prompt = """You are a grader assessing relevance of a retrieved MANUSCRIPT to a user query.
+Your goal is to determine if the retrieved content contains semantic information relevant to answering the query.
+
+### Instructions:
+1. Analyze the USER QUERY and the retrieved MANUSCRIPT segments.
+2. Ignore any "References" or bibliography lists; focus only on the main text content.
+3. Assign a score from 1 to 5 based on the following criteria:
+
+### Scoring Criteria:
+- **Score 1 (Irrelevant):** The manuscript discusses a completely different topic. No keywords or semantic meaning overlap with the query.
+- **Score 2 (Low Relevance):** Contains some keywords but in a wrong context, or discusses the topic too vaguely to be useful.
+- **Score 3 (Neutral/Partial):** Relevant to the broad topic but lacks specific details to answer the specific query directly.
+- **Score 4 (Relevant):** Highly relevant content that addresses most aspects of the query.
+- **Score 5 (Highly Relevant):** Contains precise, detailed information that directly answers the user's query.
+
+Output the score in the "score" field.
+"""
+
+def evaluate_relevance(inputs: dict, outputs: dict) -> int:
+
+    docs = "\n".join(outputs["documents"][:3]) 
+    messages = [
+        SystemMessage(content=relevance_prompt),
+        HumanMessage(content=f"QUERY: {inputs['query']}\n\nDOCS: {docs}")
+    ]
+    return model.with_structured_output(RelevanceGrade).invoke(messages)["score"]
+class LinkRelevanceGrade(TypedDict):
+    score: Annotated[int, ..., "Score 0 (Not useful) or 1 (Useful)"]
+
+link_eval_prompt = """You are evaluating the 'Utility' of retrieved Reference Literature.
+The user asked a query, and the system retrieved specific reference/bibliographic content.
+
+### Instructions:
+Determine if the retrieved reference content is NECESSARY or HELPFUL for a researcher to verify or deepen their understanding of the query topic.
+
+### Scoring Criteria:
+- **Score 1 (Useful/Necessary):**
+    - The reference is directly cited in the context of the query topic.
+    - It provides source data, original definitions, or further reading essential for the query.
+    - It validates the claims made about the query topic.
+- **Score 0 (Not Useful/Irrelevant):**
+    - The reference is a dead link, a generic placeholder, or completely unrelated to the query.
+    - It is a reference for a different section of the paper not relevant to the user's question.
+
+Return 1 if the reference adds value/validity, 0 otherwise.
+"""
+def evaluate_link_relevance(inputs: dict, outputs: dict) -> int:
+    query = inputs["query"]
+    docs = outputs["documents"]
+   
+    if not docs: return 0
+
+    context_str = "\n\n".join(docs) 
+    
+    messages = [
+        SystemMessage(content=link_eval_prompt),
+        HumanMessage(content=f"QUERY: {query}\n\nRETRIEVED REF CONTENT: {context_str}")
+    ]
+
+    return model.with_structured_output(LinkRelevanceGrade).invoke(messages)["score"]
+class CrossGrade(TypedDict):
+    score: Annotated[int, ..., "Score 1-5"]
+
+cross_prompt ="""You are an evaluator assessing 'Cross-Source Synthesis'.
+Your task is to determine if the ANSWER logically synthesizes information from BOTH the 'Manuscript' and the 'Reference Literature' provided in the CONTEXTS.
+
+### Instructions:
+1. Check if the User Query requires information that might need backing by references.
+2. Compare the ANSWER against the provided CONTEXTS.
+3. Evaluate how well the answer bridges the main text and its sources.
+
+### Scoring Criteria:
+- **Score 1 (Failure):** The answer contradicts the contexts or fails to use available information completely.
+- **Score 2 (Imbalanced - Manuscript Only):** The answer relies SOLELY on the manuscript and ignores key references even when they contradict or add vital context to the manuscript (e.g., "The paper says X, but reference Y implies Z" is missing).
+- **Score 3 (Basic):** The answer mentions both sources but lists them separately without true synthesis.
+- **Score 4 (Good Synthesis):** The answer connects the manuscript's claims with the references effectively.
+- **Score 5 (Excellent Synthesis):** The answer perfectly integrates the manuscript's narrative with the evidence from references, creating a cohesive and well-supported argument.
+
+If the references are empty or irrelevant, score based on how well the manuscript is utilized.
+Output the score in the "score" field.
+"""
+
+def evaluate_cross_groundedness(inputs: dict, outputs: dict) -> int:
+    return model.with_structured_output(CrossGrade).invoke([
+        SystemMessage(content=cross_prompt),
+        HumanMessage(content=f"CONTEXT: {outputs['documents']}\n\nANSWER: {outputs['answer']}")
+    ])["score"]
+
 # Grade output schema
 class GroundedGrade(TypedDict):
     explanation: Annotated[str, ..., "Explain your reasoning for the score"]
@@ -56,16 +148,22 @@ class GroundedGrade(TypedDict):
     ]
 
 # Grade prompt
-grounded_instructions = """You are an impartial evaluator. Your task is to assess whether an ANSWER is "grounded in" a set of provided CONTEXTS using a 1-5 score.
+grounded_instructions = """You are an impartial evaluator assessing 'Groundedness' (Factuality).
+Your task is to verify whether the ANSWER is entirely based on the provided CONTEXTS.
 
-You will be given a set of CONTEXTS and an ANSWER. Here are the grading criteria:
-- **1 (Not Grounded):** The ANSWER contains significant information or claims that are NOT supported by the CONTEXTS (i.e., hallucination).
-- **2 (Poorly Grounded):** The ANSWER contains some claims that are not supported, or significantly misrepresents the CONTEXTS.
-- **3 (Partially Grounded):** The ANSWER is mostly supported by the CONTEXTS, but may contain minor claims or details not found in the CONTEXTS.
-- **4 (Well Grounded):** The ANSWER is almost entirely supported by the CONTEXTS, with only very minor embellishments.
-- **5 (Fully Grounded):** Every single claim in the ANSWER is explicitly supported by the provided CONTEXTS.
+### Process:
+1. **Deconstruct:** Break the ANSWER into individual atomic claims/facts.
+2. **Verify:** Check each claim against the CONTEXTS.
+3. **Score:** Assign a score based on the ratio of supported claims to unsupported claims.
 
-Explain your reasoning in a step-by-step manner. First, break down the ANSWER into individual claims. Second, for each claim, check if it is supported by the CONTEXTS. Finally, provide your score from 1 to 5.
+### Scoring Criteria:
+- **Score 1 (Hallucinated):** The answer is largely fabricated or makes major claims not found in the context.
+- **Score 2 (Poorly Grounded):** Significant parts of the answer (more than 50%) are not supported by the context.
+- **Score 3 (Partially Grounded):** The core answer is correct, but includes minor details or numbers not present in the context.
+- **Score 4 (Well Grounded):** The answer is supported, but may use slightly different terminology or inferred logic that is highly likely but not explicit.
+- **Score 5 (Fully Grounded):** Every single claim, number, and logic step in the answer is explicitly supported by the provided CONTEXTS. No outside knowledge was added.
+
+Provide a step-by-step 'explanation' of your reasoning, then output the 'grounded' score.
 """
 
 # Grader LLM
@@ -128,7 +226,7 @@ def load_queries_from_dir(query_dir: str):
 
 client = Client()
 
-dataset_name = "RAG_evaluation_01"
+dataset_name = f"RAG_evaluation_01_{int(time.time())}"
 
 try:
     dataset = client.read_dataset(dataset_name=dataset_name)
@@ -147,11 +245,15 @@ experiment_results = client.evaluate(
     target,                      
     data=dataset_name,
     evaluators=[
-        groundedness
+        groundedness,
+        evaluate_relevance,
+        evaluate_link_relevance,
+        evaluate_cross_groundedness
     ],
     experiment_prefix="rag-doc-relevance",
     metadata={"version": "none"},
 )
 
 print("=== Evaluation Finished ===")
+
 print(experiment_results)
