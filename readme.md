@@ -1,15 +1,5 @@
 # RAG 과제 사용법
 
-이 코드는 다음 파이프라인을 따름:
-
-- 로컬 pdf 파일을 불러옴(임시)
-- 청크로 split
-- Embedding 수행
-- FAISS vector store 빌드
-- Retriever로 유사도 분석
-- LLM 활용하여 쿼리에 대답
-- .txt 파일을 유저 쿼리로 입력받음.
-
 ------------------------------------------------------------
 
 ## 1. Prepare your PDFs
@@ -21,7 +11,10 @@ data/pdfs/
 Example structure:
 ```
 project/
-  rag.py
+  evaluate.py
+  evaluate.sh
+  rag.sh
+  do_rag.py
   rag/
   data/
     pdfs/
@@ -40,7 +33,7 @@ pip install -r requirements.txt
 
 ## 3. Set your API key (Gemini or GPT)
 
-rag.py의 load_your_model_here() 내부
+rag.sh와 evaluate.sh 부분
 
 ```
 api_key = "MY API KEY"
@@ -63,17 +56,10 @@ queries 폴더 안에 질의할 쿼리를 텍스트 파일로 만든다.
 
 다음 스크립트 입력
 ```
-python rag.py queries/query1.txt
+python evaluate.sh
 ```
 
-콘솔에 다음과 같이 출력되고, 해당 Response는 .answer파일로 저장됨.
+evaluate.sh는 모든 쿼리에 대해 평가까지 한 파이프라인에 수행함.
+하나의 쿼리에 대한 답변만 보고 싶다면 rag.sh를 수행.
 
 ------------------------------------------------------------
-
-쿼리 예시
-
-```
-Q : What is the difference of LOCCV and v-fold CV and MCCV?
-
-A : 'Based on the text provided:\n\n*   LOOCV and v-fold CV have the smallest MSE and bias when the sample size is small (n=40).\n*   The advantage of increasing the MCCV iterations from 20 to 50 to 1000 is minimal.\n*   MCCV does not decrease the MSE or bias enough to warrant its use over v-fold CV.\n*   When feature selection is discarded, LOOCV and 10-fold CV are no longer better than the .632+ bootstrap.\n*   As the sample size grows, the differences among the resampling methods decrease.'
-```
